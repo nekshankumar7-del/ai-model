@@ -96,7 +96,7 @@ def cut_directory(directory: Path | str, writer_from_meta: bool = True
                   ) -> list[CropRecord]:
     """Cut crops from every image in a directory."""
     directory = Path(directory)
-    suffixes = {".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff", ".bmp", ".webp"}
+    from .preprocess import PAGE_SUFFIXES as suffixes
     out: list[CropRecord] = []
     for path in sorted(directory.rglob("*")):
         if path.suffix.lower() not in suffixes:

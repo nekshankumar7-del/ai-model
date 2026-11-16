@@ -25,7 +25,7 @@ from factfind.paths import DATA_DIR
 from factfind.recognizer_train import levenshtein
 
 PAGES_DIR = DATA_DIR / "pages"
-ACCEPTED = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "bmp", "webp"]
+from factfind.preprocess import UPLOAD_TYPES as ACCEPTED
 CROP_HEIGHT = 52
 CROP_MAX_WIDTH = 760
 
@@ -133,11 +133,38 @@ def main() -> None:
         cols[1].metric("Lines scored", len(scored))
         cols[2].metric("Character accuracy", f"{mean:.0%}")
         cols[3].metric("Exact lines", f"{exact}/{len(scored)}")
+
+        # Saved text that is character-for-character the model's own output is
+        # usually an uncorrected pre-fill rather than a genuine match, and it
+        # silently inflates both this figure and the training set.
+        if exact / max(1, len(scored)) > 0.5 and len(scored) >= 5:
+            st.warning(
+                f"{exact} of {len(scored)} saved lines are identical to the "
+                f"model's output. If those were pre-filled and saved without "
+                f"correcting them, this accuracy figure is meaningless and "
+                f"the training data is wrong. Check them against the crops.",
+                icon="⚠️",
+            )
     else:
         st.metric("Lines found", len(rows))
         st.caption("Type the correct text next to a line to start scoring.")
 
     st.divider()
+    prefill = st.checkbox(
+        "Pre-fill the last column with what the model read",
+        value=True,
+        help="On: every line comes back already filled in, so you correct "
+             "rather than retype. Off: the column starts empty, which is the "
+             "honest way to measure accuracy.",
+    )
+    if prefill:
+        st.caption(
+            "⚠️ Pre-filled text is the model's guess, not the truth. **Correct "
+            "each line before saving** — saving an uncorrected guess both "
+            "flatters the accuracy figure and teaches the recogniser to read "
+            "wrongly."
+        )
+
     header = st.columns([4, 3, 3])
     header[0].markdown("**The line on the page**")
     header[1].markdown("**What the model read**")
@@ -175,9 +202,13 @@ def main() -> None:
                         unsafe_allow_html=True,
                     )
             with right:
+                # A saved correction always wins; the model's reading is only
+                # a starting point for lines nobody has confirmed yet.
+                seed = record.text or (record.ocr_guess.strip() if prefill else "")
                 corrections[record.image] = st.text_input(
-                    f"truth-{record.image}", value=record.text,
-                    key=f"t-{record.image}", label_visibility="collapsed",
+                    f"truth-{record.image}", value=seed,
+                    key=f"t-{record.image}-{int(prefill)}",
+                    label_visibility="collapsed",
                     placeholder="type the correct text",
                 )
 

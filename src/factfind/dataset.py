@@ -35,7 +35,7 @@ from .matcher import FieldMatch
 from .preprocess import load_pages
 from .splits import Sample
 
-IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff", ".bmp", ".webp"}
+from .preprocess import PAGE_SUFFIXES as IMAGE_SUFFIXES  # noqa: E402
 
 
 def discover_samples(directory: Path | str) -> list[Sample]:

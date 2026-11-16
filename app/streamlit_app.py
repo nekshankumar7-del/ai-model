@@ -35,12 +35,12 @@ from factfind.extract import (STATUS_FILLED, STATUS_MISSING, STATUS_UNSURE,
 from factfind.knowledge import KnowledgeError, load_knowledge
 from factfind.labels import flatten_labels
 from factfind.ocr import engine_report
-from factfind.preprocess import load_pages_from_bytes
+from factfind.preprocess import UPLOAD_TYPES, load_pages_from_bytes
 
 st.set_page_config(page_title="Fact-find extraction", page_icon="📄",
                    layout="wide", initial_sidebar_state="expanded")
 
-ACCEPTED = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "bmp", "webp"]
+ACCEPTED = UPLOAD_TYPES
 
 STATUS_STYLE = {
     STATUS_FILLED: ("✅", "filled"),

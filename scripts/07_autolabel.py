@@ -110,7 +110,7 @@ def main() -> int:
                    if not k.startswith("_")}
 
     images = Path(args.images)
-    suffixes = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+    from factfind.preprocess import IMAGE_SUFFIXES as suffixes
     by_stem = {p.stem: p for p in sorted(images.rglob("*"))
                if p.suffix.lower() in suffixes}
 

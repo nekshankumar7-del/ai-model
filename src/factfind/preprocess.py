@@ -16,10 +16,28 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
+
+# iPhones photograph in HEIC by default, so notes arrive in that format far
+# more often than not. Registering the opener teaches PIL to read it; without
+# it every iPhone photo fails at the first step.
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    HEIF_AVAILABLE = True
+except ImportError:                                     # pragma: no cover
+    HEIF_AVAILABLE = False
 
 MAX_SIDE = 2200          # cap work size; bigger buys nothing for OCR
 MIN_SIDE = 600
+
+# Every page format the pipeline accepts. Kept here so the apps, the dataset
+# loader and the crop cutter cannot drift apart.
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".webp",
+                  ".heic", ".heif"}
+PAGE_SUFFIXES = IMAGE_SUFFIXES | {".pdf"}
+UPLOAD_TYPES = sorted(s.lstrip(".") for s in PAGE_SUFFIXES)
 
 
 # --------------------------------------------------------------------------
@@ -32,15 +50,46 @@ def load_pages(path: Path | str, dpi: int = 200) -> list[np.ndarray]:
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         return _load_pdf(path, dpi=dpi)
+    if suffix in {".heic", ".heif"}:
+        if not HEIF_AVAILABLE:
+            raise ValueError(
+                f"{path.name} is HEIC, but pillow-heif is not installed. "
+                f"Run: pip install pillow-heif"
+            )
+        return [_from_pil(Image.open(path))]
+
     img = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
     if img is None:
-        # Fall back to PIL for formats OpenCV declines (some PNG/HEIC variants).
+        # Fall back to PIL for formats OpenCV declines.
         try:
-            pil = Image.open(path).convert("RGB")
-            img = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
+            return [_from_pil(Image.open(path))]
         except Exception as exc:
             raise ValueError(f"cannot read image: {path} ({exc})") from exc
-    return [img]
+    # OpenCV ignores EXIF orientation, so re-read through PIL to honour it.
+    return [_apply_exif_rotation(path, img)]
+
+
+def _from_pil(pil: Image.Image) -> np.ndarray:
+    """PIL image -> BGR array, with EXIF rotation applied.
+
+    Phone cameras record orientation in EXIF rather than rotating the pixels,
+    so a page photographed in portrait can arrive on its side. Everything
+    downstream assumes upright text.
+    """
+    pil = ImageOps.exif_transpose(pil)
+    return cv2.cvtColor(np.array(pil.convert("RGB")), cv2.COLOR_RGB2BGR)
+
+
+def _apply_exif_rotation(path: Path, img: np.ndarray) -> np.ndarray:
+    try:
+        with Image.open(path) as pil:
+            rotated = ImageOps.exif_transpose(pil)
+            if rotated.size != pil.size or rotated is not pil:
+                return cv2.cvtColor(np.array(rotated.convert("RGB")),
+                                    cv2.COLOR_RGB2BGR)
+    except Exception:
+        pass            # no EXIF, or unreadable: the pixels are what we have
+    return img
 
 
 def load_pages_from_bytes(data: bytes, filename: str, dpi: int = 200) -> list[np.ndarray]:
@@ -60,8 +109,13 @@ def load_pages_from_bytes(data: bytes, filename: str, dpi: int = 200) -> list[np
                     arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
                 pages.append(arr)
         return pages
-    pil = Image.open(io.BytesIO(data)).convert("RGB")
-    return [cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)]
+    try:
+        return [_from_pil(Image.open(io.BytesIO(data)))]
+    except Exception as exc:
+        hint = ""
+        if filename.lower().endswith((".heic", ".heif")) and not HEIF_AVAILABLE:
+            hint = " (HEIC needs pillow-heif: pip install pillow-heif)"
+        raise ValueError(f"cannot read {filename}: {exc}{hint}") from exc
 
 
 def _load_pdf(path: Path, dpi: int) -> list[np.ndarray]:

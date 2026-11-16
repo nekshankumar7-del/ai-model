@@ -29,7 +29,7 @@ from factfind.paths import DATA_DIR
 
 # Uploaded pages are copied here so the crops keep resolving between sessions.
 PAGES_DIR = DATA_DIR / "pages"
-ACCEPTED = ["jpg", "jpeg", "png", "pdf", "tif", "tiff", "bmp", "webp"]
+from factfind.preprocess import UPLOAD_TYPES as ACCEPTED
 
 # Only set the page config when this file is the entry point. When it is
 # imported as a page of the single combined app, the host has already done it
