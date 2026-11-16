@@ -1,0 +1,1433 @@
+{
+  "about": "Knowledge file for \"Fill from document\" on the fact find. It lists, section by section, the fields a client's form or an adviser's notes can fill: the labels people write for each field and how its answer is read. What is read from an uploaded document is matched against this file and turned into one JSON object per fact-find section. Edit this file to teach it a new label, option or field; no code change is needed. The document itself is read in the browser and never uploaded.",
+  "version": 1,
+  "howToEdit": {
+    "sections[].id": "The fact-find page the fields belong to (personal-details, dependants, employment…).",
+    "sections[].default": "true on the one section that answers with no heading above them belong to.",
+    "sections[].headings": "Words that mark this section's heading on a document (\"Dependent Details\", \"Employment\"). Lower case; a word may be a stem (\"employ\").",
+    "fields[].key": "The form's field name (camelCase), used as the key in the extracted JSON.",
+    "fields[].label": "The field as the CRM shows it.",
+    "fields[].aliases": "Other labels documents use for it (\"dob\", \"surname\"). Lower case, no punctuation.",
+    "fields[].kind": "How the answer is read: text | name | fullName | date | choice | yesNo | number | money | email | phone | niNumber.",
+    "fields[].choices": "For kind 'choice': the allowed values, each with the words people write for it.",
+    "fields[].choicesFrom": "For kind 'choice': a list loaded by the CRM instead (countries, nationalities). choiceAliases adds words for its values.",
+    "fields[].allowOther": "For kind 'choice': keep an answer that matches no choice, for the adviser to check.",
+    "fields[].min / max": "For kind 'number': the allowed range.",
+    "fields[].minAge": "For a date of birth: younger than this is marked unsure (likely someone else's date).",
+    "fields[].vocabulary": "Words often written as the answer (\"full time\", \"accountant\"). Not a list of allowed values: they only help the text reader make out messy handwriting.",
+    "fields[].when": "'mortgage': only on mortgage cases.",
+    "fields[].required": "true: must be filled before the section can be saved (while onlyIf holds).",
+    "fields[].onlyIf": "The field applies only when another field of the section is { equals } a value, or is { filled }. Otherwise it is hidden, not required and saved as empty.",
+    "sections[].when": "'mortgage' or 'protection': the section exists only on that kind of case.",
+    "sections[].save.api": "How the section is saved: personal-details | dependant | employment-income | expenditure (each saved by its own rules), or record: GET then PUT /fact-finds/clients/{client}/{endpoint}, keeping what is stored and replacing these fields.",
+    "sections[].save.pages": "The fact-find pages (sidebar) that show this section's data; marked when values read from a document are not saved yet.",
+    "sections[].save.omitEmpty": "record: unanswered fields are left out of the payload (as the page does).",
+    "sections[].save.emptyAsZero": "record: an empty amount is saved as 0 (as the page does).",
+    "sections[].save.dropSaved": "record: stored keys never sent back.",
+    "otherHeadings": "Headings for parts of the fact find with no fields here yet (mortgage, protection, existing property, financial overview). Answers under them are listed, never filled."
+  },
+  "sections": [
+    {
+      "id": "personal-details",
+      "title": "Personal Details",
+      "save": {
+        "api": "personal-details",
+        "pages": ["personal-details"]
+      },
+      "default": true,
+      "headings": ["personal details", "personal information", "client details", "about you", "applicant details"],
+      "fields": [
+        {
+          "key": "fullName",
+          "label": "Full name",
+          "aliases": ["name", "client", "applicant", "customer", "client name", "applicant name", "full name", "name in full"],
+          "kind": "fullName"
+        },
+        {
+          "key": "title",
+          "label": "Title",
+          "aliases": ["salutation", "prefix"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "Mr",
+              "label": "Mr"
+            },
+            {
+              "value": "Mrs",
+              "label": "Mrs"
+            },
+            {
+              "value": "Ms",
+              "label": "Ms"
+            },
+            {
+              "value": "Miss",
+              "label": "Miss"
+            },
+            {
+              "value": "Dr",
+              "label": "Dr"
+            },
+            {
+              "value": "Prof",
+              "label": "Prof"
+            }
+          ]
+        },
+        {
+          "key": "firstName",
+          "label": "First name",
+          "aliases": ["forename", "forenames", "first names", "given name", "given names", "christian name"],
+          "kind": "name"
+        },
+        {
+          "key": "middleName",
+          "label": "Middle name",
+          "aliases": ["middle names", "middle initial", "second name"],
+          "kind": "name"
+        },
+        {
+          "key": "lastName",
+          "label": "Last name",
+          "aliases": ["surname", "family name", "last names"],
+          "kind": "name"
+        },
+        {
+          "key": "dateOfBirth",
+          "label": "Date of birth",
+          "aliases": ["dob", "db", "birth date", "born"],
+          "kind": "date",
+          "minAge": 16
+        },
+        {
+          "key": "maritalStatus",
+          "label": "Marital status",
+          "aliases": ["marital", "relationship status", "married status", "civil status"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "Single",
+              "label": "Single",
+              "aliases": ["s", "unmarried", "not married"]
+            },
+            {
+              "value": "Married",
+              "label": "Married",
+              "aliases": ["m", "wed", "wedded", "mar"]
+            },
+            {
+              "value": "Divorced",
+              "label": "Divorced",
+              "aliases": ["div", "d"]
+            },
+            {
+              "value": "Widowed",
+              "label": "Widowed",
+              "aliases": ["widow", "widower", "w"]
+            },
+            {
+              "value": "CivilPartnership",
+              "label": "Civil Partnership",
+              "aliases": ["civil partner", "cp"]
+            },
+            {
+              "value": "Separated",
+              "label": "Separated",
+              "aliases": ["sep"]
+            },
+            {
+              "value": "Cohabiting",
+              "label": "Cohabiting",
+              "aliases": ["cohab", "living together", "living with partner", "partner", "co habiting"]
+            }
+          ]
+        },
+        {
+          "key": "gender",
+          "label": "Gender",
+          "aliases": ["sex"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "Male",
+              "label": "Male",
+              "aliases": ["m", "man"]
+            },
+            {
+              "value": "Female",
+              "label": "Female",
+              "aliases": ["f", "woman"]
+            },
+            {
+              "value": "Other",
+              "label": "Other",
+              "aliases": ["non binary", "nonbinary"]
+            }
+          ]
+        },
+        {
+          "key": "countryOfBirth",
+          "label": "Country of birth",
+          "aliases": ["place of birth", "birth country", "born in", "country born"],
+          "kind": "choice",
+          "choicesFrom": "countries",
+          "choiceAliases": {
+            "United Kingdom": ["uk", "u k", "england", "great britain", "gb", "britain"],
+            "United States": ["usa", "us", "u s a", "america", "united states of america"],
+            "France": ["french"],
+            "Spain": ["spanish"],
+            "Netherlands": ["dutch", "holland"],
+            "Poland": ["polish", "polska"],
+            "Ireland": ["irish", "eire", "republic of ireland"],
+            "Switzerland": ["swiss"],
+            "Philippines": ["filipino", "filipina", "philipines"],
+            "Sri Lanka": ["srilanka", "sri lankan"],
+            "Bangladesh": ["bangladeshi"],
+            "United Arab Emirates": ["uae", "emirati", "dubai"],
+            "New Zealand": ["nz", "kiwi"],
+            "South Africa": ["south african"]
+          },
+          "allowOther": true
+        },
+        {
+          "key": "nationality",
+          "label": "Nationality",
+          "aliases": ["citizenship", "citizen of"],
+          "kind": "choice",
+          "choicesFrom": "nationalities",
+          "choiceAliases": {
+            "British": ["uk", "english", "scottish", "welsh", "brit", "united kingdom", "england", "great britain", "britain"],
+            "American": ["usa", "us", "united states", "america"],
+            "French": ["france"],
+            "Spanish": ["spain"],
+            "Dutch": ["netherlands", "holland"],
+            "Polish": ["poland"],
+            "Irish": ["ireland", "eire"],
+            "Swiss": ["switzerland"],
+            "Filipino": ["philippines", "filipina"],
+            "Emirati": ["uae", "united arab emirates"],
+            "New Zealander": ["new zealand", "nz", "kiwi"],
+            "South African": ["south africa"]
+          },
+          "allowOther": true
+        },
+        {
+          "key": "retirementAge",
+          "label": "Anticipated retirement age",
+          "aliases": [
+            "retirement age",
+            "retire at",
+            "intended retirement age",
+            "planned retirement age",
+            "age of retirement",
+            "anti retirement age",
+            "ant retirement age"
+          ],
+          "kind": "number",
+          "min": 18,
+          "max": 100
+        },
+        {
+          "key": "email",
+          "label": "Email",
+          "aliases": ["email address", "e mail", "e mail address", "email id"],
+          "kind": "email"
+        },
+        {
+          "key": "mobileNumber",
+          "label": "Mobile number",
+          "aliases": ["mobile", "mobile no", "mob", "phone", "phone number", "telephone", "tel", "tel no", "contact number", "cell"],
+          "kind": "phone"
+        },
+        {
+          "key": "isSmoker",
+          "label": "Smoker",
+          "aliases": ["smoking", "do you smoke", "smokes", "tobacco"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "isGoodHealth",
+          "label": "In good health",
+          "aliases": ["good health", "are you in good health", "health ok"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "hasWill",
+          "label": "Has a will",
+          "aliases": ["will", "do you have a will", "will in place", "made a will"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "niNumber",
+          "label": "NI number",
+          "aliases": ["national insurance", "national insurance number", "ni no", "nino", "nat ins", "nat ins no", "ni"],
+          "kind": "niNumber",
+          "when": "mortgage"
+        },
+        {
+          "key": "holdsDrivingLicence",
+          "label": "UK driving licence",
+          "aliases": ["driving licence", "holds driving licence", "driving license", "full uk driving licence"],
+          "kind": "yesNo",
+          "when": "mortgage"
+        },
+        {
+          "key": "drivingLicenceNumber",
+          "label": "Driving licence number",
+          "aliases": ["licence number", "licence no", "driving licence no", "driving license number", "dl number"],
+          "kind": "text",
+          "when": "mortgage"
+        },
+        {
+          "key": "drivingLicenceIssueDate",
+          "label": "Driving licence issue date",
+          "aliases": ["licence issue date", "licence issued", "driving licence issued"],
+          "kind": "date",
+          "when": "mortgage"
+        },
+        {
+          "key": "drivingLicenceExpiryDate",
+          "label": "Driving licence expiry date",
+          "aliases": ["licence expiry", "licence expiry date", "driving licence expiry", "licence valid to"],
+          "kind": "date",
+          "when": "mortgage"
+        },
+        {
+          "key": "passportNo",
+          "label": "Passport number",
+          "aliases": ["passport no", "passport"],
+          "kind": "text",
+          "when": "mortgage"
+        },
+        {
+          "key": "passportValidFrom",
+          "label": "Passport valid from",
+          "aliases": ["passport issue date", "passport issued", "passport date of issue"],
+          "kind": "date",
+          "when": "mortgage"
+        },
+        {
+          "key": "passportValidTo",
+          "label": "Passport valid to",
+          "aliases": ["passport expiry", "passport expiry date", "passport expires", "passport date of expiry"],
+          "kind": "date",
+          "when": "mortgage"
+        }
+      ]
+    },
+    {
+      "id": "dependants",
+      "title": "Dependants",
+      "save": {
+        "api": "dependant",
+        "pages": ["personal-details"]
+      },
+      "headings": ["dependent", "dependant", "child", "children", "son", "daughter"],
+      "fields": [
+        {
+          "key": "name",
+          "label": "Name",
+          "aliases": ["full name", "dependant name", "dependent name", "child name"],
+          "kind": "name",
+          "required": true
+        },
+        {
+          "key": "dateOfBirth",
+          "label": "Date of birth",
+          "aliases": ["dob", "db", "birth date", "born"],
+          "kind": "date",
+          "required": true
+        },
+        {
+          "key": "relationshipType",
+          "label": "Relationship",
+          "aliases": ["relation", "relationship type", "relationship to client"],
+          "kind": "choice",
+          "required": true,
+          "choices": [
+            {
+              "value": "Spouse",
+              "label": "Spouse",
+              "aliases": ["wife", "husband", "partner"]
+            },
+            {
+              "value": "Son",
+              "label": "Son"
+            },
+            {
+              "value": "Daughter",
+              "label": "Daughter"
+            },
+            {
+              "value": "Father",
+              "label": "Father",
+              "aliases": ["dad"]
+            },
+            {
+              "value": "Mother",
+              "label": "Mother",
+              "aliases": ["mum", "mom"]
+            },
+            {
+              "value": "Brother",
+              "label": "Brother"
+            },
+            {
+              "value": "Sister",
+              "label": "Sister"
+            },
+            {
+              "value": "Grandfather",
+              "label": "Grandfather"
+            },
+            {
+              "value": "Grandmother",
+              "label": "Grandmother"
+            },
+            {
+              "value": "Other",
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "key": "dependencyTermYears",
+          "label": "Dependency term (years)",
+          "aliases": [
+            "dependency term",
+            "dependent until",
+            "dependant until",
+            "years dependent",
+            "term",
+            "dependent till",
+            "dependant till",
+            "dependent up to",
+            "until age",
+            "till age",
+            "dependency term years",
+            "no of years"
+          ],
+          "kind": "number",
+          "min": 0,
+          "max": 100,
+          "required": true,
+          "onlyIf": {
+            "key": "isForWholeOfLife",
+            "equals": false
+          },
+          "yearsUntilAgeFrom": "dateOfBirth"
+        },
+        {
+          "key": "isForWholeOfLife",
+          "label": "Dependant for whole of life",
+          "aliases": ["whole of life", "dependent of whole life", "dependant of whole life", "dependent for whole of life", "whole life"],
+          "kind": "yesNo",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "employment",
+      "title": "Employment",
+      "save": {
+        "api": "employment-income",
+        "pages": ["income", "employment"]
+      },
+      "headings": ["employ", "occupation", "job", "work", "income", "salary", "earning", "primary income"],
+      "fields": [
+        {
+          "key": "employmentBasis",
+          "label": "Employment basis",
+          "aliases": ["emp basis", "basis", "employment type", "employment status", "hours"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "FullTime",
+              "label": "Full time",
+              "aliases": ["fulltime", "full", "ft"]
+            },
+            {
+              "value": "PartTime",
+              "label": "Part time",
+              "aliases": ["parttime", "part", "pt"]
+            }
+          ],
+          "vocabulary": [
+            "full time",
+            "part time",
+            "self employed",
+            "employed",
+            "contract",
+            "contractor",
+            "temporary",
+            "permanent",
+            "retired",
+            "unemployed",
+            "zero hours"
+          ]
+        },
+        {
+          "key": "occupation",
+          "label": "Occupation",
+          "aliases": ["profession", "trade"],
+          "kind": "text",
+          "vocabulary": [
+            "accountant",
+            "administrator",
+            "analyst",
+            "architect",
+            "auditor",
+            "baker",
+            "bank clerk",
+            "barrister",
+            "bartender",
+            "bookkeeper",
+            "builder",
+            "bus driver",
+            "business analyst",
+            "business owner",
+            "butcher",
+            "cabin crew",
+            "call centre agent",
+            "care worker",
+            "carer",
+            "carpenter",
+            "cashier",
+            "chartered accountant",
+            "chef",
+            "civil engineer",
+            "civil servant",
+            "cleaner",
+            "company director",
+            "consultant",
+            "cook",
+            "courier",
+            "customer service adviser",
+            "data analyst",
+            "delivery driver",
+            "dental nurse",
+            "dentist",
+            "designer",
+            "developer",
+            "director",
+            "doctor",
+            "driver",
+            "electrician",
+            "engineer",
+            "estate agent",
+            "factory worker",
+            "farmer",
+            "financial adviser",
+            "financial analyst",
+            "firefighter",
+            "gardener",
+            "graphic designer",
+            "hairdresser",
+            "healthcare assistant",
+            "homemaker",
+            "hr manager",
+            "insurance broker",
+            "it consultant",
+            "it support",
+            "kitchen porter",
+            "labourer",
+            "landlord",
+            "lawyer",
+            "lecturer",
+            "lorry driver",
+            "machine operator",
+            "manager",
+            "managing director",
+            "marketing manager",
+            "mechanic",
+            "mechanical engineer",
+            "midwife",
+            "mortgage adviser",
+            "network engineer",
+            "nurse",
+            "office manager",
+            "operations manager",
+            "optician",
+            "painter and decorator",
+            "paralegal",
+            "paramedic",
+            "personal assistant",
+            "pharmacist",
+            "physiotherapist",
+            "pilot",
+            "plasterer",
+            "plumber",
+            "police officer",
+            "postman",
+            "product manager",
+            "professor",
+            "programmer",
+            "project manager",
+            "property developer",
+            "quantity surveyor",
+            "receptionist",
+            "researcher",
+            "retail manager",
+            "retired",
+            "roofer",
+            "sales assistant",
+            "sales manager",
+            "scaffolder",
+            "scientist",
+            "secretary",
+            "security guard",
+            "self employed",
+            "shop assistant",
+            "social worker",
+            "software developer",
+            "software engineer",
+            "soldier",
+            "solicitor",
+            "store manager",
+            "student",
+            "supervisor",
+            "surgeon",
+            "surveyor",
+            "systems administrator",
+            "tax adviser",
+            "taxi driver",
+            "teacher",
+            "teaching assistant",
+            "technician",
+            "train driver",
+            "vet",
+            "waiter",
+            "warehouse operative",
+            "web developer",
+            "welder"
+          ]
+        },
+        {
+          "key": "jobTitle",
+          "label": "Job title",
+          "aliases": ["position", "role", "job"],
+          "kind": "text",
+          "vocabulary": [
+            "accountant",
+            "administrator",
+            "analyst",
+            "architect",
+            "auditor",
+            "baker",
+            "bank clerk",
+            "barrister",
+            "bartender",
+            "bookkeeper",
+            "builder",
+            "bus driver",
+            "business analyst",
+            "business owner",
+            "butcher",
+            "cabin crew",
+            "call centre agent",
+            "care worker",
+            "carer",
+            "carpenter",
+            "cashier",
+            "chartered accountant",
+            "chef",
+            "civil engineer",
+            "civil servant",
+            "cleaner",
+            "company director",
+            "consultant",
+            "cook",
+            "courier",
+            "customer service adviser",
+            "data analyst",
+            "delivery driver",
+            "dental nurse",
+            "dentist",
+            "designer",
+            "developer",
+            "director",
+            "doctor",
+            "driver",
+            "electrician",
+            "engineer",
+            "estate agent",
+            "factory worker",
+            "farmer",
+            "financial adviser",
+            "financial analyst",
+            "firefighter",
+            "gardener",
+            "graphic designer",
+            "hairdresser",
+            "healthcare assistant",
+            "homemaker",
+            "hr manager",
+            "insurance broker",
+            "it consultant",
+            "it support",
+            "kitchen porter",
+            "labourer",
+            "landlord",
+            "lawyer",
+            "lecturer",
+            "lorry driver",
+            "machine operator",
+            "manager",
+            "managing director",
+            "marketing manager",
+            "mechanic",
+            "mechanical engineer",
+            "midwife",
+            "mortgage adviser",
+            "network engineer",
+            "nurse",
+            "office manager",
+            "operations manager",
+            "optician",
+            "painter and decorator",
+            "paralegal",
+            "paramedic",
+            "personal assistant",
+            "pharmacist",
+            "physiotherapist",
+            "pilot",
+            "plasterer",
+            "plumber",
+            "police officer",
+            "postman",
+            "product manager",
+            "professor",
+            "programmer",
+            "project manager",
+            "property developer",
+            "quantity surveyor",
+            "receptionist",
+            "researcher",
+            "retail manager",
+            "retired",
+            "roofer",
+            "sales assistant",
+            "sales manager",
+            "scaffolder",
+            "scientist",
+            "secretary",
+            "security guard",
+            "self employed",
+            "shop assistant",
+            "social worker",
+            "software developer",
+            "software engineer",
+            "soldier",
+            "solicitor",
+            "store manager",
+            "student",
+            "supervisor",
+            "surgeon",
+            "surveyor",
+            "systems administrator",
+            "tax adviser",
+            "taxi driver",
+            "teacher",
+            "teaching assistant",
+            "technician",
+            "train driver",
+            "vet",
+            "waiter",
+            "warehouse operative",
+            "web developer",
+            "welder"
+          ]
+        },
+        {
+          "key": "employerName",
+          "label": "Employer name",
+          "aliases": ["employer", "company", "works for", "employed by"],
+          "kind": "text"
+        },
+        {
+          "key": "startDate",
+          "label": "Start date",
+          "aliases": ["date started", "started", "employment start date", "since"],
+          "kind": "date"
+        },
+        {
+          "key": "grossAnnualSalary",
+          "label": "Gross annual salary",
+          "aliases": ["annual salary", "salary", "gross salary", "basic salary", "gross income", "annual income", "income"],
+          "kind": "money"
+        },
+        {
+          "key": "bonusAmount",
+          "label": "Bonus",
+          "aliases": ["bonus amount", "annual bonus"],
+          "kind": "money"
+        },
+        {
+          "key": "bonusFrequency",
+          "label": "Bonus frequency",
+          "aliases": ["bonus frequency", "bonus paid"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "Monthly",
+              "label": "Monthly",
+              "aliases": ["month", "pm", "per month", "a month"]
+            },
+            {
+              "value": "Quarterly",
+              "label": "Quarterly",
+              "aliases": ["quarter", "per quarter"]
+            },
+            {
+              "value": "Annually",
+              "label": "Annually",
+              "aliases": ["annual", "yearly", "pa", "per year", "a year"]
+            },
+            {
+              "value": "Weekly",
+              "label": "Weekly",
+              "aliases": ["week", "pw", "per week", "a week"]
+            }
+          ],
+          "required": true,
+          "onlyIf": {
+            "key": "bonusAmount",
+            "filled": true
+          }
+        },
+        {
+          "key": "commissionAmount",
+          "label": "Commission",
+          "aliases": ["commission amount"],
+          "kind": "money"
+        },
+        {
+          "key": "commissionFrequency",
+          "label": "Commission frequency",
+          "aliases": ["commission frequency", "commission paid"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "Monthly",
+              "label": "Monthly",
+              "aliases": ["month", "pm", "per month", "a month"]
+            },
+            {
+              "value": "Quarterly",
+              "label": "Quarterly",
+              "aliases": ["quarter", "per quarter"]
+            },
+            {
+              "value": "Annually",
+              "label": "Annually",
+              "aliases": ["annual", "yearly", "pa", "per year", "a year"]
+            },
+            {
+              "value": "Weekly",
+              "label": "Weekly",
+              "aliases": ["week", "pw", "per week", "a week"]
+            }
+          ],
+          "required": true,
+          "onlyIf": {
+            "key": "commissionAmount",
+            "filled": true
+          }
+        },
+        {
+          "key": "overtimeAmount",
+          "label": "Overtime",
+          "aliases": ["overtime amount"],
+          "kind": "money"
+        },
+        {
+          "key": "overtimeFrequency",
+          "label": "Overtime frequency",
+          "aliases": ["overtime frequency", "overtime paid"],
+          "kind": "choice",
+          "choices": [
+            {
+              "value": "Monthly",
+              "label": "Monthly",
+              "aliases": ["month", "pm", "per month", "a month"]
+            },
+            {
+              "value": "Quarterly",
+              "label": "Quarterly",
+              "aliases": ["quarter", "per quarter"]
+            },
+            {
+              "value": "Annually",
+              "label": "Annually",
+              "aliases": ["annual", "yearly", "pa", "per year", "a year"]
+            },
+            {
+              "value": "Weekly",
+              "label": "Weekly",
+              "aliases": ["week", "pw", "per week", "a week"]
+            }
+          ],
+          "required": true,
+          "onlyIf": {
+            "key": "overtimeAmount",
+            "filled": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "expenditure",
+      "title": "Expenditure",
+      "save": {
+        "api": "expenditure",
+        "pages": ["expenditure"]
+      },
+      "headings": ["expenditure", "outgoing", "spending", "monthly costs", "bills"],
+      "fields": [
+        {
+          "key": "otherMortgageOrRent",
+          "label": "Other mortgage / Rent",
+          "aliases": ["rent", "other mortgage", "mortgage or rent"],
+          "kind": "money"
+        },
+        {
+          "key": "utilityBills",
+          "label": "Utility bills",
+          "aliases": ["utilities", "gas", "electricity", "gas and electric", "energy"],
+          "kind": "money"
+        },
+        {
+          "key": "water",
+          "label": "Water",
+          "aliases": ["water bill", "water rates"],
+          "kind": "money"
+        },
+        {
+          "key": "communications",
+          "label": "Communications",
+          "aliases": ["phone bill", "broadband", "internet", "mobile phone", "tv"],
+          "kind": "money"
+        },
+        {
+          "key": "councilTax",
+          "label": "Council tax",
+          "aliases": ["council"],
+          "kind": "money"
+        },
+        {
+          "key": "transportCosts",
+          "label": "Transport costs",
+          "aliases": ["transport", "travel", "car costs", "fuel", "petrol"],
+          "kind": "money"
+        },
+        {
+          "key": "studentLoan",
+          "label": "Student loan",
+          "aliases": ["student finance"],
+          "kind": "money"
+        },
+        {
+          "key": "educationFees",
+          "label": "Education fees",
+          "aliases": ["school fees", "education", "tuition"],
+          "kind": "money"
+        },
+        {
+          "key": "foodAndClothing",
+          "label": "Food & clothing",
+          "aliases": ["food", "groceries", "clothing", "food and clothing", "shopping"],
+          "kind": "money"
+        },
+        {
+          "key": "householdMaintenance",
+          "label": "Household maintenance",
+          "aliases": ["household", "maintenance", "repairs"],
+          "kind": "money"
+        },
+        {
+          "key": "entertainment",
+          "label": "Entertainment",
+          "aliases": ["leisure", "going out", "subscriptions"],
+          "kind": "money"
+        },
+        {
+          "key": "holidays",
+          "label": "Holidays",
+          "aliases": ["holiday", "travel abroad"],
+          "kind": "money"
+        },
+        {
+          "key": "pensionContributions",
+          "label": "Pension contributions",
+          "aliases": ["pension"],
+          "kind": "money"
+        },
+        {
+          "key": "investments",
+          "label": "Investments",
+          "aliases": ["savings", "saving"],
+          "kind": "money"
+        },
+        {
+          "key": "insurances",
+          "label": "Insurances",
+          "aliases": ["insurance", "premiums"],
+          "kind": "money"
+        },
+        {
+          "key": "miscellaneous",
+          "label": "Miscellaneous",
+          "aliases": ["misc", "other", "other costs"],
+          "kind": "money"
+        },
+        {
+          "key": "anticipatesIncreaseNextFiveYears",
+          "label": "Expect outgoings to rise in 5 years",
+          "aliases": ["anticipate increase", "expenditure increase", "increase in next five years", "outgoings increase"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "additionalInformation",
+          "label": "Additional information",
+          "aliases": ["expenditure notes", "additional info"],
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "id": "income-expenditure",
+      "title": "Income & Expenditure",
+      "save": {
+        "api": "record",
+        "endpoint": "income-expenditure",
+        "pages": ["income-expenditure"]
+      },
+      "headings": ["income and expenditure", "income expenditure", "disposable"],
+      "fields": [
+        {
+          "key": "totalIncome",
+          "label": "Total income",
+          "aliases": ["monthly income", "net income", "take home"],
+          "kind": "money"
+        },
+        {
+          "key": "totalExpenditure",
+          "label": "Total expenditure",
+          "aliases": ["total outgoings", "monthly outgoings"],
+          "kind": "money"
+        },
+        {
+          "key": "disposableIncome",
+          "label": "Disposable income",
+          "aliases": ["disposable", "surplus", "left over"],
+          "kind": "money"
+        },
+        {
+          "key": "savingsAndInvestments",
+          "label": "Savings & investments",
+          "aliases": ["savings", "savings and investments"],
+          "kind": "money"
+        }
+      ]
+    },
+    {
+      "id": "assets",
+      "title": "Assets",
+      "save": {
+        "api": "record",
+        "endpoint": "assets",
+        "pages": ["assets"],
+        "emptyAsZero": true,
+        "dropSaved": ["home"]
+      },
+      "headings": ["asset", "savings", "investment"],
+      "fields": [
+        {
+          "key": "property",
+          "label": "Property",
+          "aliases": ["property value", "home value", "house value"],
+          "kind": "money"
+        },
+        {
+          "key": "cashDeposits",
+          "label": "Cash deposits",
+          "aliases": ["cash", "savings", "bank", "deposits", "cash savings"],
+          "kind": "money"
+        },
+        {
+          "key": "investmentBonds",
+          "label": "Investment bonds",
+          "aliases": ["bonds", "investments"],
+          "kind": "money"
+        },
+        {
+          "key": "pensionFunds",
+          "label": "Pension funds",
+          "aliases": ["pension", "pension pot", "pensions"],
+          "kind": "money"
+        },
+        {
+          "key": "isa",
+          "label": "ISA",
+          "aliases": ["isas", "stocks and shares isa", "cash isa"],
+          "kind": "money"
+        },
+        {
+          "key": "shares",
+          "label": "Shares",
+          "aliases": ["stocks", "stocks and shares", "equities"],
+          "kind": "money"
+        },
+        {
+          "key": "businessAssets",
+          "label": "Business assets",
+          "aliases": ["business"],
+          "kind": "money"
+        },
+        {
+          "key": "allOtherAssets",
+          "label": "All other assets",
+          "aliases": ["other assets", "other"],
+          "kind": "money"
+        }
+      ]
+    },
+    {
+      "id": "credit",
+      "title": "Liabilities",
+      "when": "protection",
+      "save": {
+        "api": "record",
+        "endpoint": "credit",
+        "pages": ["credit"],
+        "emptyAsZero": true
+      },
+      "headings": ["liabilit", "credit", "debt", "loan", "borrowing", "commitments"],
+      "fields": [
+        {
+          "key": "mortgageMainResidence",
+          "label": "Mortgage (main residence)",
+          "aliases": ["mortgage", "main mortgage", "mortgage balance", "outstanding mortgage"],
+          "kind": "money"
+        },
+        {
+          "key": "creditCards",
+          "label": "Credit cards",
+          "aliases": ["credit card", "cards"],
+          "kind": "money"
+        },
+        {
+          "key": "overdraft",
+          "label": "Overdraft",
+          "aliases": ["overdrawn"],
+          "kind": "money"
+        },
+        {
+          "key": "loansHp",
+          "label": "Loans / HP",
+          "aliases": ["loan", "loans", "hp", "hire purchase", "car finance", "personal loan"],
+          "kind": "money"
+        },
+        {
+          "key": "mortgageOtherProperty",
+          "label": "Mortgage (other property)",
+          "aliases": ["other mortgage", "btl mortgage", "buy to let mortgage"],
+          "kind": "money"
+        },
+        {
+          "key": "anyOtherLending",
+          "label": "Any other lending",
+          "aliases": ["other lending", "other debt", "other loans"],
+          "kind": "money"
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "Health",
+      "save": {
+        "api": "record",
+        "endpoint": "health",
+        "pages": ["health"],
+        "omitEmpty": true
+      },
+      "headings": ["health", "medical"],
+      "fields": [
+        {
+          "key": "hadMedicalAppointmentsLast12Months",
+          "label": "Medical appointments in the last 12 months",
+          "aliases": ["medical appointments", "seen a doctor", "doctor visits", "gp visits", "appointments last 12 months"],
+          "kind": "yesNo",
+          "required": true
+        },
+        {
+          "key": "medicalAppointmentsDetails",
+          "label": "Appointment details",
+          "aliases": ["appointment details", "medical details", "reason for appointment"],
+          "kind": "text",
+          "required": true,
+          "onlyIf": {
+            "key": "hadMedicalAppointmentsLast12Months",
+            "equals": true
+          }
+        },
+        {
+          "key": "hasPlannedOrPendingAppointments",
+          "label": "Planned or pending appointments",
+          "aliases": ["pending appointments", "planned appointments", "upcoming appointments", "waiting list"],
+          "kind": "yesNo",
+          "required": true
+        },
+        {
+          "key": "plannedAppointmentsDetails",
+          "label": "Planned appointment details",
+          "aliases": ["planned appointment details", "pending details"],
+          "kind": "text",
+          "required": true,
+          "onlyIf": {
+            "key": "hasPlannedOrPendingAppointments",
+            "equals": true
+          }
+        },
+        {
+          "key": "tookEarlyRetirementIllHealth",
+          "label": "Early retirement through ill health",
+          "aliases": ["early retirement", "retired through ill health", "ill health retirement"],
+          "kind": "yesNo",
+          "required": true
+        },
+        {
+          "key": "earlyRetirementDetails",
+          "label": "Early retirement details",
+          "aliases": ["retirement details", "ill health details"],
+          "kind": "text",
+          "required": true,
+          "onlyIf": {
+            "key": "tookEarlyRetirementIllHealth",
+            "equals": true
+          }
+        },
+        {
+          "key": "hasNoDiagnosedConditions",
+          "label": "No diagnosed conditions",
+          "aliases": ["no conditions", "no medical conditions", "no diagnosed conditions"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "hasNoFamilyHistoryConditions",
+          "label": "No family history conditions",
+          "aliases": ["no family history", "family history clear"],
+          "kind": "yesNo"
+        }
+      ]
+    },
+    {
+      "id": "life-style",
+      "title": "Lifestyle",
+      "save": {
+        "api": "record",
+        "endpoint": "lifestyle",
+        "pages": ["life-style"],
+        "omitEmpty": true
+      },
+      "headings": ["lifestyle", "life style", "habits"],
+      "fields": [
+        {
+          "key": "isPregnant",
+          "label": "Pregnant",
+          "aliases": ["pregnancy", "is pregnant"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "heightBeforePregnancy",
+          "label": "Height before pregnancy",
+          "aliases": ["height"],
+          "kind": "text",
+          "required": true,
+          "onlyIf": {
+            "key": "isPregnant",
+            "equals": true
+          }
+        },
+        {
+          "key": "weightBeforePregnancyKg",
+          "label": "Weight before pregnancy (kg)",
+          "aliases": ["weight", "weight kg"],
+          "kind": "number",
+          "min": 0,
+          "max": 400,
+          "required": true,
+          "onlyIf": {
+            "key": "isPregnant",
+            "equals": true
+          }
+        },
+        {
+          "key": "alcoholUnitsPerWeek",
+          "label": "Alcohol units per week",
+          "aliases": ["alcohol", "units", "drinks", "units per week", "drinking"],
+          "kind": "number",
+          "min": 0,
+          "max": 500
+        },
+        {
+          "key": "doesSmoke",
+          "label": "Smokes",
+          "aliases": ["smoker", "smoking", "nicotine", "vape", "vaping"],
+          "kind": "yesNo"
+        },
+        {
+          "key": "lastSmokedYears",
+          "label": "Last smoked (years ago)",
+          "aliases": ["last smoked", "stopped smoking", "years since smoked"],
+          "kind": "number",
+          "min": 0,
+          "max": 99,
+          "required": true,
+          "onlyIf": {
+            "key": "doesSmoke",
+            "equals": true
+          }
+        },
+        {
+          "key": "lastSmokedMonths",
+          "label": "Last smoked (months ago)",
+          "aliases": ["months since smoked"],
+          "kind": "number",
+          "min": 0,
+          "max": 11,
+          "onlyIf": {
+            "key": "doesSmoke",
+            "equals": true
+          }
+        },
+        {
+          "key": "doesHazardousSports",
+          "label": "Hazardous sports or activities",
+          "aliases": ["hazardous sports", "dangerous sports", "hazardous activities", "extreme sports"],
+          "kind": "yesNo"
+        }
+      ]
+    },
+    {
+      "id": "company-details",
+      "title": "Company Details",
+      "save": {
+        "api": "record",
+        "endpoint": "company-details",
+        "pages": ["company-details"]
+      },
+      "headings": ["company", "business", "employer details"],
+      "fields": [
+        {
+          "key": "companyName",
+          "label": "Company name",
+          "aliases": ["company", "business name", "name of company"],
+          "kind": "text"
+        },
+        {
+          "key": "registeredNumberAndAddress",
+          "label": "Registered number & address",
+          "aliases": ["registered number", "company number", "registered address"],
+          "kind": "text"
+        },
+        {
+          "key": "natureOfBusiness",
+          "label": "Nature of business",
+          "aliases": ["business type", "trade", "industry"],
+          "kind": "text"
+        },
+        {
+          "key": "telephoneNumber",
+          "label": "Company telephone",
+          "aliases": ["company phone", "business phone", "office number"],
+          "kind": "phone"
+        },
+        {
+          "key": "numberOfEmployees",
+          "label": "Number of employees",
+          "aliases": ["employees", "staff", "headcount"],
+          "kind": "number",
+          "min": 0,
+          "max": 1000000
+        },
+        {
+          "key": "businessTurnover",
+          "label": "Business turnover",
+          "aliases": ["turnover", "revenue", "sales"],
+          "kind": "money"
+        },
+        {
+          "key": "grossProfit",
+          "label": "Gross profit",
+          "aliases": ["gross"],
+          "kind": "money"
+        },
+        {
+          "key": "netProfit",
+          "label": "Net profit",
+          "aliases": ["net", "profit"],
+          "kind": "money"
+        },
+        {
+          "key": "totalValueOfBusiness",
+          "label": "Total value of business",
+          "aliases": ["business value", "valuation", "company value"],
+          "kind": "money"
+        },
+        {
+          "key": "primaryFirstName",
+          "label": "Key contact first name",
+          "aliases": ["contact first name", "director first name"],
+          "kind": "text"
+        },
+        {
+          "key": "primaryLastName",
+          "label": "Key contact last name",
+          "aliases": ["contact last name", "director surname"],
+          "kind": "text"
+        },
+        {
+          "key": "primaryJobTitle",
+          "label": "Key contact job title",
+          "aliases": ["contact role", "director role"],
+          "kind": "text"
+        },
+        {
+          "key": "primaryEmail",
+          "label": "Key contact email",
+          "aliases": ["contact email", "director email"],
+          "kind": "email"
+        },
+        {
+          "key": "primaryPhone",
+          "label": "Key contact phone",
+          "aliases": ["contact phone", "director phone"],
+          "kind": "phone"
+        }
+      ]
+    }
+  ],
+  "otherHeadings": [
+    "budget",
+    "mortgage requirement",
+    "property",
+    "properties",
+    "protection",
+    "cover",
+    "policy",
+    "policies",
+    "existing policies",
+    "partner",
+    "spouse",
+    "wife",
+    "husband",
+    "joint",
+    "applicant 2",
+    "client 2",
+    "second applicant",
+    "note",
+    "notes"
+  ]
+}

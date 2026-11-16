@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# CLIENT DATA - never commit. This repository is public.
+# ---------------------------------------------------------------------------
+# Every real note, crop, transcription and label stays local. If you add a new
+# place to put client material, add it here FIRST.
+data/
+!data/.gitkeep
+
+# The sample notes live in knowledge/ alongside the knowledge file. The
+# knowledge file itself is config and is committed; the photographs are
+# client records and are not.
+knowledge/*
+!knowledge/fact-find-knowledge.json
+
+# Anything that looks like a scanned document, wherever it ends up.
+*.jpg
+*.jpeg
+*.png
+*.pdf
+*.tif
+*.tiff
+*.heic
+*.webp
+*.bmp
+# ...except figures the reports need, which contain no client values.
+!reports/figures/coverage-*.png
+!reports/figures/font_samples.png
+
+# ---------------------------------------------------------------------------
+# Environment and build artefacts
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Trained weights: large, regenerable, and derived from client handwriting.
+models/*.joblib
+models/*.pt
+models/*.onnx
+models/thresholds.json
+
+# Exported browser bundle: regenerate with scripts/05_export_onnx.py.
+angular/assets/factfind/*.onnx
+angular/assets/factfind/*.json
+
+# Downloaded fonts (regenerate with scripts/08_fetch_fonts.py).
+data/fonts/
+
+# Reports may quote file stems; metrics JSON is safe, markdown is reviewed.
+reports/*.json
+reports/.*-used
+
+# ---------------------------------------------------------------------------
+# Editors and OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.streamlit/
+node_modules/

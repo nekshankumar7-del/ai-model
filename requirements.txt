@@ -1,0 +1,36 @@
+# Core numerics
+numpy>=1.26,<2.1
+scipy>=1.11
+pandas>=2.1
+joblib>=1.3
+
+# Imaging / document handling
+pillow>=10.2
+opencv-python-headless>=4.9
+PyMuPDF>=1.24
+
+# OCR engine (ONNX based, no system binary needed)
+rapidocr-onnxruntime>=1.3.24
+# Optional alternative engine; only used if the tesseract binary is on PATH
+pytesseract>=0.3.10
+
+# Matching / parsing
+rapidfuzz>=3.6
+python-dateutil>=2.9
+
+# Models
+scikit-learn>=1.4
+lightgbm>=4.3
+
+# ONNX export + runtime
+onnx>=1.16
+onnxruntime>=1.17
+skl2onnx>=1.16
+onnxmltools>=1.12
+
+# Reporting / UI
+matplotlib>=3.8
+streamlit>=1.33
+
+# Testing
+pytest>=8.0

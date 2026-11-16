@@ -1,0 +1,48 @@
+You are a senior ML engineer. Build and train a model pipeline in Python that extracts fact-find field values from photos/PDFs of handwritten or typed client notes, with the highest possible accuracy on MY dataset. The final models must be exported to ONNX so the Angular app can run them in the browser with no server and no external AI API.
+
+## Success criteria
+- Accuracy is the only goal. Optimise on my dataset, measure on a held-out test split of my dataset.
+- Priority 1: very low wrong-fill rate (a value that is filled but wrong). Targets on the test set: under 1% wrong-fill for choice, yes/no, date, number and money fields; zero silent errors on niNumber, email and phone; under 5% on names and free text.
+- Priority 2: maximise exact-match accuracy and coverage at those wrong-fill limits.
+- Anything the model is not confident about must be returned as "unsure" with its top-3 candidates, never guessed.
+- Report only numbers produced by the evaluation script on the held-out test set. If a target is missed, say so with data and propose what would close the gap (more data, different labelling, template form). Do not lower the targets.
+
+## Inputs
+- `data/dataset/`: my images (JPG/PNG/PDF) with one JSON label file per image in the same schema as the knowledge file's sections and field keys (e.g. personal-details.fullName, dependants[].name, employment.grossAnnualSalary).
+- `knowledge/fact-find-knowledge.json`: field keys, labels, aliases, kinds, choices, vocabulary, validation rules, onlyIf. All field logic comes from this file; never hard-code fields.
+- If either is missing or inconsistent, stop and tell me exactly what is wrong.
+
+## Step 1 - Dataset audit (before training anything)
+1. Count images, writers (ask me or cluster by handwriting), layouts (label-value lines, narrative sentences, printed forms), and the frequency of each field and each value.
+2. Find label errors: images whose JSON disagrees with what OCR confidently reads; duplicates and near-duplicates (leakage risk); fields with too few examples; unreadable images.
+3. Report the gaps and the minimum extra data needed per field to reach the targets. Give me a list of what to add.
+
+## Step 2 - Splits without leakage
+Split by writer and by client (never the same person or note in train and test): train 70 / validation 15 / test 15. Keep the test set locked. Do not tune on it. Use k-fold by group on train+validation for model selection.
+
+## Step 3 - Baseline
+Image preprocessing (page crop, perspective, ruled-line removal, adaptive threshold, deskew) + Tesseract + rule/fuzzy matcher with per-kind parsers and lexicon snapping. Record per-field accuracy and wrong-fill rate on the validation set. This is the number to beat.
+
+## Step 4 - Models (train on my dataset, in this order)
+1. Layout/field linker: for each text line or region, predict the field key (or none). Train a classifier on OCR lines + positions + neighbouring lines (character n-gram features plus position features; try logistic regression, linear SVM, gradient boosting; consider a small transformer only if it wins). Calibrate probabilities.
+2. Value reader for handwriting: fine-tune a pretrained handwriting/text-recognition model (check commercial licence and size first) or train a compact CRNN-CTC on my cropped value regions, with these techniques:
+   - augmentation (perspective, blur, shadow, ink colour, ruled lines, noise, JPEG) applied to train only
+   - synthetic extra data generated from the knowledge file (same fields, random valid values, handwriting fonts) used only to pre-train; final fine-tuning and all selection on real data
+   - lexicon-constrained decoding: choice fields can only output allowed options (and their aliases), vocabulary fields snap to the vocabulary, digit fields use digit-only charsets, dates must parse, NI numbers must match the pattern
+   - ensemble or test-time augmentation if it measurably helps
+3. Confidence model: gradient-boosted classifier predicting "is this extracted value correct?" from recogniser confidence, margin between top-2 candidates, fuzzy score, parser validity, cross-field checks (dependant age vs relationship, retirement age vs client age, repeated surnames) and image quality. Calibrate it. Choose thresholds on the validation set so the wrong-fill targets are met, then report the coverage that results.
+Each model must beat the baseline on validation. If not, drop it and say so.
+
+## Step 5 - Improve by error analysis (loop)
+After each training round: list the top error types on validation (which fields, which characters, which writers, which image conditions), fix the biggest one (more data of that type, better augmentation, a post-processing rule, relabelling), retrain, and log before/after. Stop when targets are met or when gains fall below 0.5% per round, then run the test set ONCE and report.
+
+## Step 6 - Export for the browser
+Export all shipped models to quantised ONNX. Budget: under 30 MB total, under 4 s per page on a mid-range laptop. Provide `model_card.md` per model (data, metrics, known failures, version), a JSON spec for the Angular side (preprocessing, charset, label order, thresholds), and a test that loads the ONNX with onnxruntime and reproduces the Python predictions on 50 samples.
+
+## Step 7 - Final report
+`reports/final.md`: per-field table (baseline vs final: exact match, wrong-fill, unsure, missing), coverage-vs-wrong-fill curve, worst failure cases with images, and what additional data would improve each weak field.
+
+## Rules
+- No real client data in git, logs or notebooks; keep the dataset in .gitignore and tell me if you see personal data (names, NI numbers, passport numbers) so we can anonymise.
+- Ask before installing heavy packages or downloading pretrained weights/datasets.
+- Work step by step; after each step show results and wait for my confirmation.
