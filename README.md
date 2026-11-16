@@ -186,3 +186,7 @@ is uploaded anywhere and no external API is called.
 - **The browser OCR adapter is tesseract.js**, while the thresholds were
   calibrated against PP-OCRv4. Re-fit with `FACTFIND_OCR=tesseract` if you ship
   tesseract - see `angular/README.md`.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
