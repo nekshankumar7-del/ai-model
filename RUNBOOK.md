@@ -12,65 +12,56 @@ Python has none of these packages, and the error it gives is confusing.
 
 ---
 
-## 0. Before anything: the current blocker
+## 0. Smart App Control workaround (resolved 17 Nov 2026)
 
-**Smart App Control is enforcing on this machine and blocks every native
-Python extension in `.venv`** (NumPy, PyTorch, OpenCV, ONNX Runtime). It
-switched on 17 Nov 2026 at 16:28. Until it is cleared, every command below
-except the dataset downloads fails with:
+**Smart App Control blocks native Python DLLs on the `E:\` drive** (NumPy,
+PyTorch, OpenCV, ONNX Runtime). The fix: a second venv under the user
+profile, which Smart App Control does not enforce on:
 
 ```
-ImportError: DLL load failed while importing _multiarray_umath:
-An Application Control policy has blocked this file.
+C:\Users\NEKSHAN KUMAR\python-envs\aimodel\
 ```
 
-Check whether it is still in force:
+All commands in this runbook now use this venv:
 
 ```bash
-.venv/Scripts/python.exe -c "import numpy, torch, cv2; print('OK')"
+"C:\Users\NEKSHAN KUMAR\python-envs\aimodel\Scripts\python.exe" ...
 ```
+
+The old `.venv` on `E:\` still exists but its native extensions will not
+load while Smart App Control is enforcing. The registry value is still 1:
 
 ```powershell
 (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy').VerifiedAndReputablePolicyState
 # 0 = off, 1 = enforcing (blocked), 2 = audit only
 ```
 
-The fix is Windows Security -> App & browser control -> Smart App Control ->
-Off, or a WDAC path exemption for `.venv\` from IT. Policy ID
-`{0283ac0f-fff1-49ae-ada1-8a933130cad6}`, Event ID 3077 in
-`Microsoft-Windows-CodeIntegrity/Operational`.
-
-Reinstalling NumPy, recreating the venv, reinstalling Python and moving the
-project off OneDrive all fail identically. The block is on *loading an
-unsigned DLL*, not on the install.
+If Smart App Control is ever turned off (Windows Security -> App & browser
+control -> Smart App Control -> Off), the original `.venv` will work again.
 
 Zscaler is a separate thing and is **not** the blocker. It intercepts TLS,
-which is why downloads use `.venv/corp-ca-bundle.pem`; that is already
-handled automatically.
+which is why downloads use the CA bundle; that is already handled. The
+bundle is at `C:\Users\NEKSHAN KUMAR\python-envs\aimodel\corp-ca-bundle.pem`.
 
 ---
 
 ## 1. Setup
 
 ```bash
-# Python 3.11
-python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements.txt
+# Python 3.11 — venv under user profile to avoid Smart App Control
+"C:\Users\NEKSHAN KUMAR\AppData\Local\Programs\Python\Python311\python.exe" -m venv "C:\Users\NEKSHAN KUMAR\python-envs\aimodel"
 
-# PyTorch is CPU-only here and comes from its own index
-.venv/Scripts/python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-```
+set PY="C:\Users\NEKSHAN KUMAR\python-envs\aimodel\Scripts\python.exe"
+set CERT="C:\Users\NEKSHAN KUMAR\python-envs\aimodel\corp-ca-bundle.pem"
 
-Behind the corporate proxy, pip needs the CA bundle:
-
-```bash
-.venv/Scripts/python.exe -m pip install -r requirements.txt --cert .venv/corp-ca-bundle.pem
+%PY% -m pip install -r requirements.txt --cert %CERT% --timeout 300
+%PY% -m pip install torch --index-url https://download.pytorch.org/whl/cpu --cert %CERT% --timeout 600
 ```
 
 Check it worked:
 
 ```bash
-.venv/Scripts/python.exe -c "import numpy, torch, cv2, onnxruntime, streamlit; print('OK')"
+"C:\Users\NEKSHAN KUMAR\python-envs\aimodel\Scripts\python.exe" -c "import numpy, torch, cv2, onnxruntime, streamlit; print('OK')"
 ```
 
 ---

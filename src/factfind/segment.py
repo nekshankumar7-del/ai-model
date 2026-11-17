@@ -199,6 +199,12 @@ def _fuzzy_heading(norm: str, stem: str, floor: int = 74) -> bool:
 
     if len(norm.split()) > 3:
         return False
+    # Require the stem to be long enough for a meaningful fuzzy match.
+    # Short single-word stems ("wealth", "employ") are already handled
+    # by the word-starts branch; letting them through the fuzzy path
+    # turns company headers ("WealthMaxS") into section headings.
+    if len(stem) < 8:
+        return False
     return fuzz.ratio(norm, stem) >= floor
 
 
@@ -247,13 +253,19 @@ def detect_section(text: str, kn: Knowledge, current: str) -> tuple[str, bool]:
             continue
         if norm == stem:
             score = 3
-        elif norm.startswith(stem):
+        elif norm.startswith(stem) and (
+            len(norm) == len(stem) or norm[len(stem)] == " "
+        ):
             score = 2
         elif f" {stem} " in padded:
             score = 1
-        elif len(words) <= 2 and any(w.startswith(stem) for w in words):
+        elif len(words) <= 2 and any(
+            w == stem or (w.startswith(stem) and len(w) - len(stem) <= 3)
+            for w in words
+        ):
             # Stem headings: the knowledge file says "employ" matches
-            # "Employment". Only trusted on a genuinely short line.
+            # "Employment". Only trusted on a genuinely short line, and
+            # the word must not extend far past the stem.
             score = 1
         elif len(stem) >= 6 and _fuzzy_heading(norm, stem):
             # Handwritten headings get mangled too: "Dependent Details"

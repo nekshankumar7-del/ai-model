@@ -646,7 +646,173 @@ def parse_ni_number(text: str, fld: Field) -> ParseResult:
 NAME_PARTICLES = {"de", "la", "van", "von", "der", "den", "del", "di", "da",
                   "al", "bin", "ibn", "le", "dos", "das"}
 TITLE_WORDS = {"mr", "mrs", "ms", "miss", "dr", "prof", "sir", "lady", "rev"}
-NAME_RE = re.compile(r"^[A-Za-z][A-Za-z'’\-\.\s]{0,78}$")
+NAME_RE = re.compile(r"^[A-Za-z][A-Za-z’’\-\.\s]{0,78}$")
+
+# OCR character pairs that are commonly confused in handwritten names.
+# (misread, correct) — applied only when matching against a known name.
+_NAME_OCR_SWAPS: list[tuple[str, str]] = [
+    ("u", "v"), ("v", "u"), ("w", "v"), ("a", "o"), ("o", "a"), ("q", "g"),
+    ("J", "T"), ("T", "J"), ("J", "P"), ("L", "I"), ("I", "L"),
+    ("U", "V"), ("V", "U"), ("W", "V"), ("A", "O"), ("O", "A"), ("Q", "G"),
+    ("n", "ri"), ("ri", "n"), ("rn", "m"), ("m", "rn"),
+    ("cl", "d"), ("d", "cl"), ("li", "h"), ("h", "li"),
+    ("c", "e"), ("e", "c"),
+]
+
+_COMMON_FIRST_NAMES: set[str] = {
+    "aaron", "adam", "adrian", "aidan", "aisha", "alan", "alex", "alexander",
+    "alexandra", "alice", "alison", "amanda", "amber", "amelia", "amy",
+    "andrea", "andrew", "angela", "ann", "anna", "anne", "anthony", "archie",
+    "arthur", "ashton", "ava", "barry", "beatrice", "ben", "benjamin",
+    "beth", "billy", "bobby", "brian", "brooke", "bruce", "callum", "carl",
+    "carol", "caroline", "catherine", "charlie", "charlotte", "chloe",
+    "chris", "christian", "christine", "christopher", "claire", "clara",
+    "colin", "connor", "daniel", "danielle", "darren", "david", "dean",
+    "deborah", "declan", "dennis", "derek", "diane", "donald", "donna",
+    "dorothy", "dylan", "edward", "eileen", "elaine", "eleanor", "elena",
+    "elizabeth", "ella", "ellie", "emily", "emma", "eric", "ethan", "eva",
+    "eve", "evelyn", "faye", "finley", "fiona", "florence", "frances",
+    "francis", "frank", "fred", "frederick", "freya", "gabriel", "gary",
+    "gavin", "gemma", "george", "georgia", "gerald", "gillian", "glen",
+    "gordon", "grace", "graham", "grant", "greg", "gregory", "hannah",
+    "harold", "harriet", "harry", "harvey", "hayley", "hazel", "heather",
+    "helen", "henry", "holly", "howard", "hugo", "ian", "imogen", "irene",
+    "iris", "isaac", "isabel", "isabella", "isla", "ivy", "jack", "jacob",
+    "jade", "jake", "james", "jamie", "jane", "janet", "jasmine", "jason",
+    "jean", "jennifer", "jenny", "jessica", "joan", "joanne", "jocelyn",
+    "joe", "john", "jonathan", "jordan", "joseph", "joshua", "joyce",
+    "judith", "julia", "julie", "karen", "karl", "kate", "katherine",
+    "kathleen", "katie", "keith", "kelly", "ken", "kenneth", "kerry",
+    "kevin", "kieran", "kim", "kimberly", "kyle", "laura", "lauren",
+    "lawrence", "leah", "lee", "leo", "leon", "lewis", "liam", "lily",
+    "linda", "lisa", "logan", "lorraine", "louis", "louise", "lucas",
+    "lucy", "luke", "lydia", "madeleine", "malcolm", "mandy", "marc",
+    "marcus", "margaret", "maria", "marie", "mark", "martin", "mary",
+    "mason", "matthew", "max", "megan", "melissa", "michael", "michelle",
+    "milly", "mohammed", "molly", "monica", "muhammad", "myles", "nancy",
+    "naomi", "natalie", "natasha", "nathan", "neil", "nicholas", "nicola",
+    "nicole", "nigel", "noah", "noel", "norman", "oliver", "olivia",
+    "oscar", "owen", "pamela", "patricia", "patrick", "paul", "paula",
+    "pauline", "penny", "peter", "philip", "philippa", "phoebe", "poppy",
+    "rachel", "ralph", "rebecca", "reece", "reginald", "rhys", "richard",
+    "robert", "robin", "roger", "ronald", "rosemary", "rosie", "ross",
+    "ruby", "russell", "ruth", "ryan", "sally", "sam", "samantha", "samuel",
+    "sandra", "sara", "sarah", "scott", "sean", "sharon", "sheila", "simon",
+    "siobhan", "sofia", "sophie", "stanley", "stella", "stephen", "stuart",
+    "sue", "susan", "suzanne", "sylvia", "tamara", "tanya", "taylor",
+    "teresa", "terry", "theodore", "theresa", "thomas", "timothy", "tom",
+    "tony", "tracy", "trevor", "tyler", "valerie", "vanessa", "victor",
+    "victoria", "vincent", "violet", "vivienne", "wayne", "wendy",
+    "william", "zara", "zoe", "olumide", "ava",
+}
+
+_COMMON_SURNAMES: set[str] = {
+    "adams", "ahmed", "ali", "allen", "anderson", "armstrong", "atkinson",
+    "bailey", "baker", "ball", "barker", "barnes", "bell", "bennett",
+    "berry", "bird", "bishop", "booth", "bradley", "brown", "burgess",
+    "burns", "burton", "butler", "byrne", "campbell", "carr", "carter",
+    "chambers", "chapman", "clark", "clarke", "cole", "coleman", "collins",
+    "cook", "cooper", "cox", "craig", "cross", "cunningham", "davies",
+    "davis", "dawson", "dean", "dixon", "doyle", "duncan", "dunn",
+    "edwards", "elliott", "ellis", "evans", "ferguson", "fernandez",
+    "ferreira", "fisher", "fletcher", "ford", "foster", "fox", "francis",
+    "freeman", "frost", "gardner", "george", "gibson", "gordon", "graham",
+    "grant", "gray", "green", "griffin", "griffiths", "hall", "hamilton",
+    "harper", "harris", "harrison", "hart", "harvey", "hayes", "henderson",
+    "hill", "holmes", "hopkins", "hudson", "hughes", "hunt", "hunter",
+    "hussain", "jackson", "james", "jenkins", "johnson", "jones", "jordan",
+    "kaur", "kelly", "kennedy", "khan", "king", "knight", "kumar", "lamb",
+    "lane", "lawrence", "lee", "lewis", "lloyd", "long", "lucas", "lynch",
+    "mahmood", "marshall", "martin", "mason", "matthews", "mcdonald",
+    "mcgregor", "mclean", "miller", "mills", "mitchell", "moore", "morgan",
+    "morris", "moss", "murphy", "murray", "myers", "nelson", "newman",
+    "newton", "obrien", "oliver", "osborne", "owen", "page", "palmer",
+    "parker", "patel", "payne", "pearce", "pearson", "perry", "phillips",
+    "powell", "price", "read", "reed", "reid", "reynolds", "richards",
+    "richardson", "riley", "roberts", "robertson", "robinson", "rogers",
+    "rose", "ross", "russell", "ryan", "sanders", "scott", "sharp",
+    "shaw", "shepherd", "silva", "simpson", "singh", "smith", "spencer",
+    "stevens", "stevenson", "stewart", "stone", "sullivan", "sutton",
+    "taylor", "thomas", "thompson", "turner", "walker", "wallace", "walsh",
+    "ward", "warren", "watson", "watts", "webb", "webster", "wells",
+    "west", "white", "wilkinson", "williams", "wilson", "wood", "woods",
+    "wright", "young",
+}
+
+_ALL_KNOWN_NAMES: set[str] = _COMMON_FIRST_NAMES | _COMMON_SURNAMES
+
+
+def _split_at_case_boundary(token: str) -> list[str]:
+    """Split ‘OlumideThompson’ → [‘Olumide’, ‘Thompson’] at camelCase joins."""
+    parts: list[str] = []
+    start = 0
+    for i in range(1, len(token)):
+        if token[i - 1].islower() and token[i].isupper():
+            parts.append(token[start:i])
+            start = i
+    parts.append(token[start:])
+    return parts
+
+
+def _split_by_dictionary(token: str) -> list[str] | None:
+    """Split 'olumidethompson' into ['Olumide', 'Thompson'] using name dictionaries."""
+    low = token.lower()
+    best: tuple[str, str] | None = None
+    for i in range(2, len(low) - 1):
+        left, right = low[:i], low[i:]
+        if left in _COMMON_FIRST_NAMES and right in _COMMON_SURNAMES:
+            if best is None or len(left) > len(best[0]):
+                best = (left, right)
+        if left in _COMMON_SURNAMES and right in _COMMON_FIRST_NAMES:
+            if best is None or len(left) > len(best[0]):
+                best = (left, right)
+    if best:
+        return [best[0].capitalize(), best[1].capitalize()]
+    return None
+
+
+def _try_ocr_swap(name_lower: str) -> str | None:
+    """If exactly one OCR swap turns `name_lower` into a known name, return it."""
+    for misread, correct in _NAME_OCR_SWAPS:
+        ml, cl = misread.lower(), correct.lower()
+        idx = 0
+        while True:
+            pos = name_lower.find(ml, idx)
+            if pos < 0:
+                break
+            candidate = name_lower[:pos] + cl + name_lower[pos + len(ml):]
+            if candidate in _ALL_KNOWN_NAMES:
+                return candidate
+            idx = pos + 1
+    return None
+
+
+def _repair_name_ocr(value: str) -> tuple[str, float]:
+    """Attempt OCR-aware correction of a parsed name value.
+
+    Returns (possibly corrected value, score penalty multiplier 0..1).
+    A multiplier of 1.0 means no change; < 1.0 means the name was repaired.
+    """
+    tokens = value.split()
+    repaired_tokens: list[str] = []
+    penalty = 1.0
+
+    for tok in tokens:
+        low = tok.lower().rstrip(".")
+        if len(low) < 2:
+            repaired_tokens.append(tok)
+            continue
+        if low in _ALL_KNOWN_NAMES:
+            repaired_tokens.append(tok)
+            continue
+        fixed = _try_ocr_swap(low)
+        if fixed is not None:
+            repaired_tokens.append(titlecase_name(fixed))
+            penalty *= 0.85
+        else:
+            repaired_tokens.append(tok)
+
+    return " ".join(repaired_tokens), penalty
 
 
 def titlecase_name(s: str) -> str:
@@ -696,6 +862,18 @@ def parse_name(text: str, fld: Field) -> ParseResult:
         return ParseResult(raw=raw, reason="only a title, no name")
 
     score = 1.0
+
+    # Split concatenated names at camelCase boundaries ("OlumideThompson")
+    # or by dictionary lookup ("olumidethompson" → "Olumide Thompson").
+    if fld.kind == "fullName" and len(tokens) == 1 and len(tokens[0]) >= 6:
+        parts = _split_at_case_boundary(tokens[0])
+        if len(parts) > 1:
+            tokens = parts
+        else:
+            dict_parts = _split_by_dictionary(tokens[0])
+            if dict_parts:
+                tokens = dict_parts
+                score *= 0.85
     if len(raw) != len(s):
         score *= 0.9          # characters were dropped to make it name-like
     if any(len(t) == 1 and not t.endswith(".") for t in tokens):
@@ -703,17 +881,23 @@ def parse_name(text: str, fld: Field) -> ParseResult:
 
     if fld.kind == "fullName":
         if len(tokens) < 2:
-            # A "full name" with one token is usually a half-read line.
             score *= 0.55
         value = titlecase_name(" ".join(tokens))
     else:
         if len(tokens) > 1 and fld.key in ("firstName", "lastName", "middleName"):
-            # Multiple tokens in a single-part name field: keep, but doubt it.
             score *= 0.8
         value = titlecase_name(" ".join(tokens))
 
     if len(value) < 2:
         return ParseResult(raw=raw, reason="name too short")
+
+    repaired, penalty = _repair_name_ocr(value)
+    if repaired != value:
+        score *= penalty
+        candidates = [(repaired, score), (value, score / penalty)]
+        return ParseResult(value=repaired, parse_score=score, valid=True, raw=raw,
+                           candidates=candidates)
+
     return ParseResult(value=value, parse_score=score, valid=True, raw=raw,
                        candidates=[(value, score)])
 

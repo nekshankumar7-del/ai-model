@@ -130,7 +130,7 @@ class ConfidenceModel:
         than quietly relaxing the target.
         """
         thresholds: dict[str, float] = {}
-        grid = np.round(np.arange(0.30, 1.0001, 0.005), 4)
+        grid = np.round(np.arange(0.30, 1.0001, 0.025), 4)
 
         for kind in sorted(set(kinds.tolist())):
             target = WRONG_FILL_TARGETS.get(kind, 0.01)
@@ -144,7 +144,8 @@ class ConfidenceModel:
                 if n_filled == 0:
                     continue
                 wrong_rate = float((~y[filled].astype(bool)).sum()) / n_filled
-                if wrong_rate <= target + 1e-12:
+                effective_target = target * 0.75 if n_filled < 60 else target
+                if wrong_rate <= effective_target + 1e-12:
                     coverage = n_filled / max(1, len(y))
                     if coverage >= best_coverage:
                         best_coverage, chosen = coverage, float(t)
