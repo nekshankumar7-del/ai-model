@@ -32,5 +32,11 @@ onnxmltools>=1.12
 matplotlib>=3.8
 streamlit>=1.33
 
+# Handwriting recogniser training (src/htr/, scripts/06 and 10-14).
+# Not needed to run the shipped fact-find pipeline, which uses the exported
+# ONNX models. CPU wheels:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+
 # Testing
 pytest>=8.0

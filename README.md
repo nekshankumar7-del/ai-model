@@ -32,6 +32,9 @@ were fitted on only two validation writers and did not carry to three unseen
 ones. That gap is the main finding, and `reports/final.md` sets out exactly
 what would close it. The targets have not been lowered.
 
+Every command for building, running and testing this project is collected in
+**[RUNBOOK.md](RUNBOOK.md)**.
+
 ## Quick start
 
 ```bash
@@ -58,6 +61,60 @@ python -m venv .venv
 
 `--server.address localhost` keeps the app off your network, which matters
 when you start feeding it real client notes.
+
+## Training the recogniser on public handwriting datasets
+
+The recogniser is the accuracy bottleneck (see [Known limitations](#known-limitations)),
+and it had only two data sources: font renderings and hand-transcribed crops.
+`src/htr/` adds a second, self-contained pipeline that discovers, downloads,
+normalises and trains on free public handwriting corpora.
+
+```bash
+# what is registered, on what terms, and how big
+.venv/Scripts/python.exe scripts/10_fetch_datasets.py --list
+
+# download the default English set (EMNIST + NIST SD19 by_class, 1.6 GB)
+.venv/Scripts/python.exe scripts/10_fetch_datasets.py
+
+# adapt every corpus to one schema, validate, deduplicate
+.venv/Scripts/python.exe scripts/11_build_manifests.py
+
+# writer-independent split, Unicode charset, train, evaluate, export
+.venv/Scripts/python.exe scripts/12_train_htr.py --level char
+.venv/Scripts/python.exe scripts/12_train_htr.py --level word --compose-words
+
+# score a checkpoint, or read some images with it
+.venv/Scripts/python.exe scripts/13_evaluate_htr.py --name htr-char-crnn
+.venv/Scripts/python.exe scripts/14_export_htr_onnx.py --name htr-char-crnn
+```
+
+The automatic path does not bypass a registration wall or a licence
+restriction. Datasets that need a human to agree to terms (IAM, GNHK) are
+registered with their licence and instructions, have working adapters, and
+are skipped rather than pulled from a mirror. Indic corpora - Devanagari,
+Bengali, Tamil, Telugu, Kannada, Malayalam, Odia, Gurmukhi, Urdu - are
+registered and verified live; they are one `--datasets` flag away but are not
+downloaded by default.
+
+There is one explicit exception, added on request:
+
+```bash
+# IAM lines from a Hugging Face mirror - benchmarking only
+pip install -U datasets pillow
+.venv/Scripts/python.exe scripts/download_iam_handwriting.py
+```
+
+IAM is **CC BY-NC 4.0: non-commercial research only**, mirror or not, so what
+this produces is for comparison against published IAM numbers and not for
+anything that ships. It records the mirror, date and licence in
+`data/extracted/iam_hf/PROVENANCE.json`.
+
+- `docs/htr-datasets.md` - the inventory, every licence, and what is blocked and why
+- `docs/htr-findings.md` - what the project already had, and why this is a separate module
+
+It keeps `src/factfind/` untouched: that charset is ASCII and its index order
+is baked into shipped ONNX models. The two share the CRNN architecture and
+nothing else.
 
 ## Using your own data
 
